@@ -1,0 +1,233 @@
+<!-- templates/bitcoins/bitcoin_list.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentación de datos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #003366;
+            padding: 20px 0;
+            text-align: center;
+            color: white;
+            font-size: 1.8em;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        .container {
+            margin-top: 120px;
+            width: 90%;
+            max-width: 1200px;
+            margin-top: 80px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+        }
+        .refresh-btn {
+            background-color: #003366;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .refresh-btn:hover {
+            background-color: #00509e;
+        }
+        .filter {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 10px;
+            font-size: 1em;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            outline: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+        th {
+            background-color: #f8f8f8;
+            color: #003366;
+        }
+        td {
+            font-size: 1em;
+        }
+        tr:hover {
+            background-color: #e6f0ff;
+        }
+        .signal {
+            font-weight: bold;
+            color: #003366;
+        }
+        .hidden {
+            display: none;
+        }
+        .positive {
+            color: green;
+            font-weight: bold;
+        }
+        .negative {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Presentación de datos
+    </header>
+
+    <div class="container">
+        <!-- Refresh Button -->
+        <button class="refresh-btn" onclick="refreshData()">Actualizar Datos</button>
+        <div class="filter">
+            <label for="cryptoFilter">Filtro: </label>
+            <select id="cryptoFilter" onchange="filterData()">
+                <option value="">--Todo--</option>
+                <option value="Bitcoin">Bitcoin</option>
+                <option value="Ethereum">Ethereum</option>
+                <option value="Ripple">BNB</option>
+                <option value="Litecoin">Cardano</option>
+            </select>
+        </div>
+        <table id="cryptoTable">
+            <thead>
+<!--            SE PRESENTA LA INFORMACIÓN EN FORMA DE TABLA CON HTML-->
+                <tr>
+                    <th onclick="sortTable(0)">Nombre</th>
+                    <th onclick="sortTable(1)">Símbolo</th>
+                    <th onclick="sortTable(2)"Precio (USD)</th>
+                    <th onclick="sortTable(3)">Vol (24h)</th>
+                    <th onclick="sortTable(4)">Vol Total</th>
+                    <th onclick="sortTable(5)">Var (24h)</th>
+                    <th onclick="sortTable(6)">Var (7d)</th>
+                    <th onclick="sortTable(7)">Cap. Mercado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bitcoin in bitcoins %}
+                    <tr>
+                        <td>{{ bitcoin.nombre }}</td>
+                        <td>{{ bitcoin.simbolo }}</td>
+                        <td>${{ bitcoin.precio_usd_field }}</td>
+                        <td>${{ bitcoin.vol_24h_field }}</td>
+                        <td>${{ bitcoin.vol_total }}</td>
+                        <td class="change-cell">{{ bitcoin.var_24h_field }}</td>
+                        <td class="change-cell">{{ bitcoin.var_7d_field }}</td>
+                        <td>${{ bitcoin.cap_mercado }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let sortDirection = { 0: 'asc', 1: 'asc', 2: 'asc', 3: 'asc', 4: 'asc', 5: 'asc', 6: 'asc', 7: 'asc' };
+        let activeFilter = "";
+
+        // Apply color coding to cells with changes
+        function colorCodeChanges() {
+            const changeCells = document.querySelectorAll('.change-cell');
+            changeCells.forEach(cell => {
+                const value = cell.textContent.trim();
+                if (value.startsWith('+')) {
+                    cell.classList.add('positive');
+                    cell.classList.remove('negative');
+                } else if (value.startsWith('-')) {
+                    cell.classList.add('negative');
+                    cell.classList.remove('positive');
+                }
+            });
+        }
+
+        // Sort table functionality
+        function sortTable(columnIndex) {
+            const table = document.getElementById("cryptoTable");
+            const rows = Array.from(table.rows).slice(1);
+            const isAscending = sortDirection[columnIndex] === 'asc';
+
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent.trim();
+                const cellB = rowB.cells[columnIndex].textContent.trim();
+
+                if (isNaN(cellA) || isNaN(cellB)) {
+                    return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                } else {
+                    return isAscending ? parseFloat(cellA) - parseFloat(cellB) : parseFloat(cellB) - parseFloat(cellA);
+                }
+            });
+
+            rows.forEach(row => table.appendChild(row));
+            sortDirection[columnIndex] = isAscending ? 'desc' : 'asc';
+        }
+
+        // Filter table data
+        function filterData() {
+            const filterValue = document.getElementById("cryptoFilter").value;
+            activeFilter = filterValue;
+            const rows = document.querySelectorAll("#cryptoTable tbody tr");
+
+            rows.forEach(row => {
+                const cryptoName = row.cells[0].textContent;
+                if (filterValue === "" || cryptoName.toLowerCase().includes(filterValue.toLowerCase())) {
+                    row.classList.remove("hidden");
+                } else {
+                    row.classList.add("hidden");
+                }
+            });
+        }
+
+        // Refresh the data
+        function refreshData() {
+            window.location.reload();
+        }
+
+        // Auto refresh every 30 seconds
+        setInterval(refreshData, 30000);
+
+        // On load
+        window.onload = function() {
+            if (activeFilter) {
+                document.getElementById("cryptoFilter").value = activeFilter;
+                filterData();
+            }
+            colorCodeChanges();  // Apply the color coding for changes
+        };
+    </script>
+
+</body>
+</html>
