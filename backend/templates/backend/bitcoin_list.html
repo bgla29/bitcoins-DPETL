@@ -1,5 +1,3 @@
-<!-- templates/bitcoins/bitcoin_list.html -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,7 +102,18 @@
             color: red;
             font-weight: bold;
         }
+        .chart-container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
     </style>
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
@@ -124,13 +133,19 @@
                 <option value="Litecoin">Cardano</option>
             </select>
         </div>
+
+        <!-- Chart Container -->
+        <div class="chart-container">
+            <canvas id="cryptoChart"></canvas>
+        </div>
+
+        <!-- Data Table -->
         <table id="cryptoTable">
             <thead>
-<!--            SE PRESENTA LA INFORMACIÓN EN FORMA DE TABLA CON HTML-->
                 <tr>
                     <th onclick="sortTable(0)">Nombre</th>
                     <th onclick="sortTable(1)">Símbolo</th>
-                    <th onclick="sortTable(2)"Precio (USD)</th>
+                    <th onclick="sortTable(2)">Precio (USD)</th>
                     <th onclick="sortTable(3)">Vol (24h)</th>
                     <th onclick="sortTable(4)">Vol Total</th>
                     <th onclick="sortTable(5)">Var (24h)</th>
@@ -216,8 +231,70 @@
             window.location.reload();
         }
 
-        // Auto refresh every 30 seconds
-        setInterval(refreshData, 30000);
+        // Function to render the chart with dynamic data
+        function renderChart() {
+            const rows = document.querySelectorAll("#cryptoTable tbody tr");
+
+            // Arreglos para almacenar los datos
+            const labels = [];
+            const prices = [];
+            const var24h = [];
+            const var7d = [];
+
+            // Iterar a través de las filas y extraer los datos de la tabla
+            rows.forEach(row => {
+                const nombre = row.cells[0].textContent.trim();
+                const precio = parseFloat(row.cells[2].textContent.replace('$', '').replace(',', ''));
+                const var24hValue = parseFloat(row.cells[5].textContent.trim().replace('%', ''));
+                const var7dValue = parseFloat(row.cells[6].textContent.trim().replace('%', ''));
+
+                // Agregar los datos al gráfico
+                labels.push(nombre);
+                prices.push(precio);
+                var24h.push(var24hValue);
+                var7d.push(var7dValue);
+            });
+
+            // Crear el gráfico
+            const ctx = document.getElementById('cryptoChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Precio (USD)',
+                            data: prices,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Variación (24h)',
+                            data: var24h,
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Variación (7d)',
+                            data: var7d,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
 
         // On load
         window.onload = function() {
@@ -226,8 +303,8 @@
                 filterData();
             }
             colorCodeChanges();  // Apply the color coding for changes
+            renderChart();  // Render the chart
         };
     </script>
-
 </body>
 </html>
